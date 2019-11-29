@@ -27,4 +27,5 @@ public class Stat
 
 	@Column(nullable = false)
 	private long value;
+
 }

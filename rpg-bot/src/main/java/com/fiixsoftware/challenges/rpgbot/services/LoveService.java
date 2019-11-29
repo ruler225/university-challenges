@@ -1,11 +1,9 @@
 package com.fiixsoftware.challenges.rpgbot.services;
 
-import com.fiixsoftware.challenges.rpgbot.persistence.models.Action;
-import com.fiixsoftware.challenges.rpgbot.persistence.models.Affection;
-import com.fiixsoftware.challenges.rpgbot.persistence.models.GameEntity;
-import com.fiixsoftware.challenges.rpgbot.persistence.models.Relationship;
-import com.fiixsoftware.challenges.rpgbot.persistence.models.Statement;
+import com.fiixsoftware.challenges.rpgbot.persistence.models.*;
+import com.fiixsoftware.challenges.rpgbot.persistence.models.types.ActionType;
 import com.fiixsoftware.challenges.rpgbot.persistence.models.types.GameEntityType;
+import com.fiixsoftware.challenges.rpgbot.persistence.models.types.StatType;
 import com.fiixsoftware.challenges.rpgbot.persistence.models.types.StatementType;
 import com.fiixsoftware.challenges.rpgbot.persistence.repositories.AffectionRepository;
 import com.fiixsoftware.challenges.rpgbot.persistence.repositories.RelationshipRepository;
@@ -82,8 +80,43 @@ public class LoveService
 	 */
 	public Affection giveGiftTo(GameEntity provider, GameEntity recipient, GameEntity gift)
 	{
-		return null;
+		if (recipient.getGameEntityType() != GameEntityType.NPC)
+		{
+			return null;
+		}
+
+		if (!(gift.getGameEntityType() == GameEntityType.CONSUMABLE || gift.getGameEntityType() == GameEntityType.ITEM ||  gift.getGameEntityType() == GameEntityType.EQUIPMENT))
+			return null;
+
+		long value = 0;
+		for (Stat stat : gift.getStats()) {
+			if (stat.getStatType() == StatType.MONETARY_VALUE) {
+				value = stat.getValue();
+				break;
+			}
+		}
+		long level = 0;
+		for (Stat stat : recipient.getStats()) {
+			if (stat.getStatType() == StatType.LEVEL) {
+				level = stat.getValue();
+				break;
+			}
+		}
+
+		long affectionLevel = value - level;
+
+		if (affectionLevel > Affection.MAXIMUM_AFFECTION || affectionLevel < Affection.MINIMUM_AFFECTION)
+			return null;
+
+		Affection affection = new Affection(provider, recipient);
+
+		affection.setAmountOfAffection(affectionLevel);
+
+		return affection;
 	}
+
+
+
 
 	/**
 	 * Show physical affection to an NPC.
@@ -95,6 +128,40 @@ public class LoveService
 	 */
 	public Affection showPhysicalAffectionTo(GameEntity provider, GameEntity recipient, Action action)
 	{
+
+		if (recipient.getGameEntityType() != GameEntityType.NPC)
+		{
+			return null;
+		}
+
+		Affection affectionForProvider = null;
+		long amountOfAffection = 0;
+		for (Affection affection : recipient.getAffections())
+		{
+			if (affection.getEntityAffectionIsToward().equals(provider))
+			{
+				affectionForProvider = affection;
+				amountOfAffection = affection.getAmountOfAffection();
+			}
+		}
+
+		if (action.getActionType() == ActionType.HUG) {
+
+			if(amountOfAffection < (Affection.MAXIMUM_AFFECTION - Affection.STARTING_AFFECTION)/2)
+				return null;
+
+		}
+		else if (action.getActionType() == ActionType.CUDDLE) {
+			if (amountOfAffection < 85)
+				return null;
+
+			for (Relationship relationship : relationshipRepository.findAll()) {
+				if(!((relationship.getRelationshipMemberA().equals(provider) && relationship.getRelationshipMemberB().equals(recipient))
+					|| (relationship.getRelationshipMemberA().equals(recipient) && relationship.getRelationshipMemberB().equals(provider))))
+					return null;
+			}
+
+	} else
 		return null;
 	}
 
